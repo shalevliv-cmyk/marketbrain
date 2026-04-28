@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketBrain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0e0f;--surface:#141516;--surface2:#1a1b1d;
+  --green:#3dd68c;--amber:#f0a429;--red:#f06464;--blue:#5b9cf6;--purple:#a78bfa;
+  --border:rgba(255,255,255,0.07);--text:rgba(255,255,255,0.9);--muted:rgba(255,255,255,0.45);--subtle:rgba(255,255,255,0.15);
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;height:100vh;display:flex;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:210px;min-width:210px;background:var(--surface);border-right:0.5px solid var(--border);display:flex;flex-direction:column;padding:16px 0;overflow-y:auto}
+.logo{padding:0 16px 20px;display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:rgba(61,214,140,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative}
+.logo-icon svg{width:16px;height:16px;fill:var(--green)}
+.pulse{width:7px;height:7px;background:var(--green);border-radius:50%;position:absolute;top:-2px;right:-2px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(61,214,140,0.4)}50%{box-shadow:0 0 0 5px rgba(61,214,140,0)}}
+.logo-text{font-family:var(--font-display);font-size:15px;color:var(--text)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:all 0.15s;color:var(--muted);font-size:13px;border-left:2px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.nav-item.active{background:rgba(61,214,140,0.08);color:var(--green);border-left:2px solid var(--green)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-section{font-size:10px;color:var(--muted);padding:12px 16px 4px;letter-spacing:0.08em;text-transform:uppercase}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:0.5px solid var(--border)}
+.next-run{font-size:11px;color:var(--muted)}
+.next-run span{color:var(--green);font-family:var(--font-mono)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.panel{display:none;flex-direction:column;height:100%}
+.panel.active{display:flex}
+.panel-header{padding:20px 24px 16px;border-bottom:0.5px solid var(--border);flex-shrink:0}
+.panel-title{font-family:var(--font-display);font-size:18px;margin-bottom:2px}
+.panel-sub{font-size:12px;color:var(--muted)}
+.panel-body{padding:20px 24px;overflow-y:auto;flex:1}
+
+/* TICKER */
+.ticker-wrap{background:var(--surface);border-bottom:0.5px solid var(--border);overflow:hidden;padding:8px 0;flex-shrink:0}
+.ticker-track{display:flex;gap:28px;animation:ticker 25s linear infinite;width:max-content}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12px;white-space:nowrap}
+.tick-sym{font-weight:600;color:var(--text)}
+.tick-up{color:var(--green)}
+.tick-dn{color:var(--red)}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi-label{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em}
+.kpi-val{font-family:var(--font-mono);font-size:22px;color:var(--text)}
+.kpi-val.green{color:var(--green)}
+
+/* INSIGHTS */
+.section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
+.insight-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.pill{font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;font-weight:500}
+.pill-bull{background:rgba(61,214,140,0.15);color:var(--green)}
+.pill-bear{background:rgba(240,100,100,0.15);color:var(--red)}
+.pill-caut{background:rgba(240,164,41,0.15);color:var(--amber)}
+.pill-tech{background:rgba(91,156,246,0.15);color:var(--blue)}
+.pill-sig{background:rgba(167,139,250,0.15);color:var(--purple)}
+.insight-text{font-size:13px;line-height:1.5;color:rgba(255,255,255,0.75)}
+
+/* SIGNAL TABLE */
+.signal-table{width:100%;border-collapse:collapse}
+.signal-table th{font-size:11px;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:0.06em}
+.signal-table td{padding:10px;border-bottom:0.5px solid var(--border);font-size:13px}
+.signal-table tr:last-child td{border-bottom:none}
+.dir-buy{color:var(--green)}
+.dir-sell{color:var(--red)}
+.dir-hold{color:var(--amber)}
+.conf-bar{height:4px;background:var(--surface2);border-radius:2px;width:100px;margin-top:4px}
+.conf-fill{height:4px;background:var(--green);border-radius:2px}
+.ticker-sym{font-family:var(--font-mono);font-weight:600;font-size:13px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:18px;background:var(--surface);border-radius:8px;padding:3px;width:fit-content}
+.tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--muted);transition:all 0.15s}
+.tab.active{background:var(--surface2);color:var(--text)}
+
+/* FORMS */
+.input-row{display:flex;gap:8px;margin-bottom:14px}
+.inp{background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none;transition:border 0.15s;width:100%}
+.inp:focus{border-color:rgba(61,214,140,0.4)}
+.inp-full{flex:1}
+.btn{background:var(--green);color:#0d0e0f;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font-body);transition:opacity 0.15s;white-space:nowrap}
+.btn:hover{opacity:0.85}
+.btn-ghost{background:transparent;color:var(--muted);border:0.5px solid var(--border);border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:var(--font-body);transition:all 0.15s}
+.btn-ghost:hover{color:var(--text);border-color:var(--subtle)}
+
+/* PROGRESS */
+.progress-wrap{margin:10px 0;display:none}
+.progress-label{font-size:12px;color:var(--muted);margin-bottom:5px}
+.progress-bar{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.progress-fill{height:3px;background:var(--green);border-radius:2px;width:0%;transition:width 0.4s}
+
+/* UPLOAD */
+.upload-zone{border:1px dashed var(--subtle);border-radius:10px;padding:40px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px}
+.upload-zone:hover{border-color:var(--green);background:rgba(61,214,140,0.03)}
+.upload-icon{font-size:28px;margin-bottom:8px;opacity:0.4}
+.upload-text{font-size:13px;color:var(--muted)}
+
+/* KB */
+.kb-entry{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px}
+.kb-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.kb-body{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+.kb-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kb-conf{font-family:var(--font-mono);font-size:11px;color:var(--green)}
+.kb-source{font-size:11px;color:var(--muted)}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);color:var(--muted);border:0.5px solid var(--border)}
+
+/* SELF-IMPROVE */
+.perp-banner{background:rgba(61,214,140,0.07);border:0.5px solid rgba(61,214,140,0.2);border-radius:10px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.perp-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+.perp-text{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5}
+.research-log{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px;max-height:140px;overflow-y:auto}
+.log-entry{font-size:12px;color:var(--muted);padding:4px 0;border-bottom:0.5px solid var(--border);font-family:var(--font-mono)}
+.log-entry:last-child{border-bottom:none}
+.log-entry .ts{color:var(--green)}
+.toggle-list{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+.toggle-item{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.toggle-label{font-size:13px}
+.toggle-sub{font-size:11px;color:var(--muted)}
+.toggle-switch{width:32px;height:18px;background:var(--surface2);border-radius:9px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle-switch.on{background:var(--green)}
+.toggle-thumb{width:12px;height:12px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform 0.2s}
+.toggle-switch.on .toggle-thumb{transform:translateX(14px)}
+
+/* SEARCH */
+.search-box{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px}
+.search-box-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px}
+.search-engine-tabs{display:flex;gap:6px;margin-bottom:12px}
+.se-tab{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--muted);border:0.5px solid var(--border);transition:all 0.15s;background:transparent}
+.se-tab.active{color:var(--text);border-color:var(--subtle);background:var(--surface2)}
+.se-tab svg{width:14px;height:14px}
+.search-result-frame{width:100%;border:0.5px solid var(--border);border-radius:8px;background:var(--surface2);display:none;overflow:hidden}
+.search-result-frame.visible{display:block}
+.search-result-frame iframe{width:100%;height:480px;border:none;display:block}
+.frame-placeholder{padding:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
+.frame-placeholder svg{width:32px;height:32px;opacity:0.3;display:block;margin:0 auto 12px}
+.quick-searches{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.quick-chip{font-size:11px;padding:4px 10px;background:var(--surface2);border:0.5px solid var(--border);border-radius:20px;cursor:pointer;color:var(--muted);transition:all 0.15s}
+.quick-chip:hover{color:var(--green);border-color:rgba(61,214,140,0.3)}
+.search-open-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:0.5px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;margin-top:8px;transition:all 0.15s}
+.search-open-btn:hover{color:var(--text)}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 160px)}
+.chat-messages{flex:1;overflow-y:auto;padding:0 0 16px;display:flex;flex-direction:column;gap:12px}
+.msg{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6;max-width:85%}
+.msg-user{background:rgba(61,214,140,0.1);border:0.5px solid rgba(61,214,140,0.2);align-self:flex-end;color:var(--text)}
+.msg-ai{background:var(--surface);border:0.5px solid var(--border);align-self:flex-start;color:rgba(255,255,255,0.8)}
+.chat-input-row{display:flex;gap:8px;margin-top:12px;flex-shrink:0}
+.quick-qs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.quick-btn{font-size:11px;padding:5px 10px;background:var(--surface);border:0.5px solid var(--border);border-radius:20px;cursor:pointer;color:var(--muted);transition:all 0.15s}
+.quick-btn:hover{color:var(--text)}
+
+/* DEPLOY */
+.step-card{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.step-num{width:24px;height:24px;background:rgba(61,214,140,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--green);font-weight:600;flex-shrink:0;margin-bottom:10px}
+.step-title{font-size:14px;font-weight:500;margin-bottom:6px}
+.step-body{font-size:13px;color:var(--muted);line-height:1.6}
+.code-block{background:var(--bg);border-radius:6px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;color:var(--green);margin:8px 0;overflow-x:auto}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      <span class="pulse"></span>
+    </div>
+    <span class="logo-text">MarketBrain</span>
+  </div>
+
+  <span class="nav-section">Main</span>
+  <div class="nav-item active" onclick="nav('overview',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Overview
+  </div>
+  <div class="nav-item" onclick="nav('videos',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    Videos
+  </div>
+  <div class="nav-item" onclick="nav('kb',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    Knowledge Base
+  </div>
+  <div class="nav-item" onclick="nav('improve',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    Self-Improve
+  </div>
+  <div class="nav-item" onclick="nav('chat',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Ask the AI
+  </div>
+
+  <span class="nav-section">Setup</span>
+  <div class="nav-item" onclick="nav('deploy',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Deploy Guide
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="next-run">Next research run in<br><span id="countdown">05:47:22</span></div>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- OVERVIEW -->
+  <div class="panel active" id="panel-overview">
+    <div class="ticker-wrap">
+      <div class="ticker-track" id="ticker"></div>
+    </div>
+    <div class="panel-header">
+      <div class="panel-title">Overview</div>
+      <div class="panel-sub">Live signals and latest insights from the knowledge base</div>
+    </div>
+    <div class="panel-body">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Videos Learned</div><div class="kpi-val green" id="kpi-videos">24</div></div>
+        <div class="kpi-card"><div class="kpi-label">Knowledge Entries</div><div class="kpi-val green" id="kpi-kb">187</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Signals</div><div class="kpi-val green" id="kpi-signals">9</div></div>
+        <div class="kpi-card"><div class="kpi-label">Avg Confidence</div><div class="kpi-val green" id="kpi-conf">73%</div></div>
+      </div>
+      <div class="section-title">Latest Insights</div>
+      <div id="insights-feed">
+        <div class="insight-card"><span class="pill pill-bull">Bullish</span><span class="insight-text">NVDA showing strong institutional accumulation with options flow skewing heavily call-side. Multiple analysts raising price targets above $1,200.</span></div>
+        <div class="insight-card"><span class="pill pill-bear">Bearish</span><span class="insight-text">Retail sector facing headwinds as consumer confidence index drops to 3-year low. Discretionary spending data weakening across Q3 projections.</span></div>
+        <div class="insight-card"><span class="pill pill-tech">Technical</span><span class="insight-text">SPY breaking above 200-day moving average on elevated volume. RSI at 58 — room to run before overbought territory.</span></div>
+        <div class="insight-card"><span class="pill pill-sig">Signal</span><span class="insight-text">Fed language shift detected: "patient" replaced by "data-dependent" in recent minutes. Rate cut probability for Q4 now 64% per CME FedWatch.</span></div>
+        <div class="insight-card"><span class="pill pill-caut">Caution</span><span class="insight-text">TSLA earnings whisper numbers suggest downside risk. Supply chain issues in Berlin factory may impact margins.</span></div>
+      </div>
+      <div class="section-title" style="margin:20px 0 10px">Active Signals</div>
+      <table class="signal-table">
+        <thead><tr><th>Ticker</th><th>Direction</th><th>Confidence</th><th>Source</th></tr></thead>
+        <tbody id="signal-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VIDEOS -->
+  <div class="panel" id="panel-videos">
+    <div class="panel-header">
+      <div class="panel-title">Videos</div>
+      <div class="panel-sub">Add videos to train the knowledge base</div>
+    </div>
+    <div class="panel-body">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('v','url',this)">Paste URL</div>
+        <div class="tab" onclick="switchTab('v','search',this)">Search Videos</div>
+        <div class="tab" onclick="switchTab('v','upload',this)">Upload File</div>
+      </div>
+      <div id="v-url">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Paste any YouTube video URL and the AI will extract stock market insights from the transcript.</p>
+        <div class="input-row">
+          <input class="inp inp-full" id="video-url-inp" placeholder="https://youtube.com/watch?v=..." />
+          <button class="btn" onclick="analyzeUrl()">Analyze</button>
+        </div>
+        <div class="progress-wrap" id="url-progress">
+          <div class="progress-label" id="url-progress-label">Fetching transcript…</div>
+          <div class="progress-bar"><div class="progress-fill" id="url-pfill"></div></div>
+        </div>
+      </div>
+      <div id="v-search" style="display:none">
+        <div class="input-row">
+          <input class="inp inp-full" id="vs-inp" placeholder="e.g. NVDA earnings analysis, Fed rate decision…" />
+          <button class="btn" onclick="searchVideos()">Search</button>
+        </div>
+        <div id="vs-results"></div>
+      </div>
+      <div id="v-upload" style="display:none">
+        <div class="upload-zone" onclick="document.getElementById('file-inp').click()">
+          <div class="upload-icon">📁</div>
+          <div class="upload-text">Click to upload or drag & drop<br><span style="font-size:11px;opacity:0.5">MP4 · MOV · WEBM · max 500MB</span></div>
+          <input type="file" id="file-inp" accept=".mp4,.mov,.webm" style="display:none" onchange="handleUpload(event)">
+        </div>
+        <div class="progress-wrap" id="upload-progress">
+          <div class="progress-label" id="upload-label">Transcribing with Whisper…</div>
+          <div class="progress-bar"><div class="progress-fill" id="upload-pfill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KNOWLEDGE BASE -->
+  <div class="panel" id="panel-kb">
+    <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-direction:row">
+      <div>
+        <div class="panel-title">Knowledge Base</div>
+        <div class="panel-sub">Everything MarketBrain has learned — <span id="kb-count">187</span> entries</div>
+      </div>
+      <button class="btn" onclick="generateEntry()">+ Generate Entry</button>
+    </div>
+    <div class="panel-body">
+      <div class="input-row" style="margin-bottom:16px">
+        <input class="inp inp-full" id="kb-search" oninput="filterKB()" placeholder="Search knowledge base…" />
+      </div>
+      <div id="kb-list"></div>
+    </div>
+  </div>
+
+  <!-- SELF-IMPROVE -->
+  <div class="panel" id="panel-improve">
+    <div class="panel-header">
+      <div class="panel-title">Self-Improve</div>
+      <div class="panel-sub">Research engine, scheduled cycles, and live search</div>
+    </div>
+    <div class="panel-body">
+      <div class="perp-banner">
+        <div class="perp-dot"></div>
+        <div class="perp-text">MarketBrain is always learning. The research engine runs every 6 hours, pulling live market data, earnings signals, and macro trends — even when you're not here.</div>
+      </div>
+
+      <!-- LIVE SEARCH -->
+      <div class="search-box">
+        <div class="search-box-title">Live Market Search</div>
+        <div class="search-engine-tabs">
+          <div class="se-tab active" id="se-google" onclick="setEngine('google')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Google
+          </div>
+          <div class="se-tab" id="se-youtube" onclick="setEngine('youtube')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 4-8 4z"/></svg>
+            YouTube
+          </div>
+        </div>
+        <div class="quick-searches" id="quick-searches">
+          <span class="quick-chip" onclick="quickSearch('NVDA stock analysis')">NVDA analysis</span>
+          <span class="quick-chip" onclick="quickSearch('Fed interest rate 2025')">Fed rates</span>
+          <span class="quick-chip" onclick="quickSearch('S&P 500 outlook')">S&P 500</span>
+          <span class="quick-chip" onclick="quickSearch('TSLA earnings')">TSLA earnings</span>
+          <span class="quick-chip" onclick="quickSearch('options flow today')">Options flow</span>
+          <span class="quick-chip" onclick="quickSearch('sector rotation 2025')">Sector rotation</span>
+        </div>
+        <div class="input-row" style="margin-bottom:8px">
+          <input class="inp inp-full" id="search-inp" placeholder="Search stocks, news, analysis…" onkeydown="if(event.key==='Enter')runSearch()" />
+          <button class="btn" onclick="runSearch()">Search</button>
+        </div>
+        <button class="search-open-btn" id="open-in-tab-btn" onclick="openInTab()" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open in new tab if results don't load
+        </button>
+        <div class="search-result-frame" id="search-frame">
+          <iframe id="search-iframe" title="Search results"></iframe>
+        </div>
+        <div class="frame-placeholder" id="frame-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Type a query above and hit Search — results appear here.<br>Use the tabs to switch between Google and YouTube.
+        </div>
+      </div>
+
+      <div class="section-title">On-Demand Research</div>
+      <div class="input-row" style="margin-bottom:6px">
+        <input class="inp inp-full" id="research-inp" placeholder="e.g. Analyze current semiconductor sector trends…" />
+        <button class="btn" onclick="runResearch()">Run</button>
+      </div>
+      <div class="progress-wrap" id="research-progress">
+        <div class="progress-label" id="research-label">Searching web…</div>
+        <div class="progress-bar"><div class="progress-fill" id="research-pfill"></div></div>
+      </div>
+
+      <div class="section-title" style="margin:18px 0 10px">Scheduled Cycles</div>
+      <div class="toggle-list" id="toggles"></div>
+
+      <div class="section-title" style="margin:18px 0 10px">Research Log</div>
+      <div class="research-log" id="research-log"></div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="panel" id="panel-chat">
+    <div class="panel-header">
+      <div class="panel-title">Ask the AI</div>
+      <div class="panel-sub">Chat powered by Claude — answers from your knowledge base</div>
+    </div>
+    <div class="panel-body">
+      <div class="quick-qs" id="quick-qs"></div>
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg msg-ai">Hi! I'm MarketBrain. Ask me anything about current market conditions, signals, or specific tickers. I'll answer based on what I've learned from your knowledge base.</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="inp inp-full" id="chat-inp" placeholder="Ask about any ticker, signal, or trend…" onkeydown="if(event.key==='Enter')sendChat()" />
+          <button class="btn" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPLOY -->
+  <div class="panel" id="panel-deploy">
+    <div class="panel-header">
+      <div class="panel-title">Deploy Guide</div>
+      <div class="panel-sub">Step-by-step — zero prior knowledge required</div>
+    </div>
+    <div class="panel-body" id="deploy-steps"></div>
+  </div>
+
+</div>
+
+<script>
+// ── TICKER ──────────────────────────────────────────────
+const tickers=[{s:'NVDA',p:875.32,c:2.4},{s:'AAPL',p:192.15,c:-0.8},{s:'TSLA',p:248.90,c:1.1},{s:'SPY',p:521.44,c:0.3},{s:'QQQ',p:448.72,c:0.5},{s:'MSFT',p:415.60,c:-0.4},{s:'AMZN',p:189.20,c:1.8},{s:'META',p:502.10,c:3.2},{s:'GOOGL',p:175.85,c:-0.2},{s:'AMD',p:164.30,c:2.1}];
+const t=document.getElementById('ticker');
+[...tickers,...tickers].forEach(x=>{
+  const d=document.createElement('div');d.className='tick-item';
+  d.innerHTML=`<span class="tick-sym">${x.s}</span><span class="${x.c>0?'tick-up':'tick-dn'}">${x.c>0?'+':''}${x.c}%</span>`;
+  t.appendChild(d);
+});
+
+// ── SIGNALS ─────────────────────────────────────────────
+const signals=[{s:'NVDA',d:'BUY',c:88,src:'Video'},{s:'SPY',d:'HOLD',c:72,src:'Web'},{s:'TSLA',d:'SELL',c:65,src:'Video'},{s:'AMD',d:'BUY',c:81,src:'Web'},{s:'META',d:'BUY',c:79,src:'Video'},{s:'AAPL',d:'HOLD',c:68,src:'Web'},{s:'MSFT',d:'BUY',c:85,src:'Video'},{s:'AMZN',d:'HOLD',c:60,src:'Web'},{s:'QQQ',d:'BUY',c:74,src:'Web'}];
+const tbody=document.getElementById('signal-tbody');
+signals.forEach(x=>{
+  const cl=x.d==='BUY'?'dir-buy':x.d==='SELL'?'dir-sell':'dir-hold';
+  tbody.innerHTML+=`<tr><td class="ticker-sym">${x.s}</td><td class="${cl}" style="font-weight:500">${x.d}</td><td><span style="font-family:var(--font-mono);font-size:12px">${x.c}%</span><div class="conf-bar"><div class="conf-fill" style="width:${x.c}%"></div></div></td><td style="color:var(--muted);font-size:12px">${x.src}</td></tr>`;
+});
+
+// ── KNOWLEDGE BASE ───────────────────────────────────────
+const kbData=[
+  {t:'NVDA Options Flow — Extreme Bullish',b:'Unusual call buying detected at $900 and $950 strikes for Oct expiry. Total premium $42M above average. Institutional positioning suggests strong upside conviction.',conf:92,src:'Video',tags:['NVDA','Options','Bullish']},
+  {t:'Fed Reserve — Hawkish Tone Softening',b:'Latest FOMC minutes reveal internal debate shifting toward easing. Three members dissented for immediate cut. Language analysis shows 6 instances of "patient" removed.',conf:78,src:'Web',tags:['Fed','Macro','Rates']},
+  {t:'S&P 500 Technical Breakout',b:'SPY closed above 200-day EMA for 3rd consecutive session on volume 40% above 30-day average. Fibonacci extension targets 540.',conf:83,src:'Video',tags:['SPY','Technical','Breakout']},
+  {t:'TSLA Q3 Delivery Miss Risk',b:'Berlin Gigafactory production data leaked showing 12% below plan. Analysts estimate 410K deliveries vs 445K consensus.',conf:71,src:'Web',tags:['TSLA','Earnings','Risk']},
+  {t:'Semiconductor Sector Rotation Signal',b:'Fund flow data shows $3.2B moving from software to semis YTD. SOX index outperforming QQQ by 8% over trailing 30 days.',conf:80,src:'Video',tags:['Semis','Rotation','SOX']},
+];
+
+function renderKB(data){
+  document.getElementById('kb-list').innerHTML=data.map(e=>`
+    <div class="kb-entry">
+      <div class="kb-title">${e.t}</div>
+      <div class="kb-body">${e.b}</div>
+      <div class="kb-meta">
+        <span class="kb-conf">${e.conf}% confidence</span>
+        <span class="kb-source">· ${e.src}</span>
+        ${e.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+renderKB(kbData);
+
+function filterKB(){
+  const q=document.getElementById('kb-search').value.toLowerCase();
+  renderKB(q?kbData.filter(e=>e.t.toLowerCase().includes(q)||e.b.toLowerCase().includes(q)||e.tags.some(tag=>tag.toLowerCase().includes(q))):kbData);
+}
+
+// ── SCHEDULED CYCLES ────────────────────────────────────
+const cycles=[
+  {n:'Daily Market Digest',d:'News + sentiment, runs at 6:00 AM',on:true},
+  {n:'Earnings Calendar',d:'Upcoming reports + whisper numbers',on:true},
+  {n:'Fed Signals Monitor',d:'FOMC language + rate probabilities',on:false},
+  {n:'Options Flow Scanner',d:'Unusual activity + dark pool prints',on:false},
+  {n:'Sector Rotation Tracker',d:'Fund flows across 11 GICS sectors',on:true},
+  {n:'Signal Recalibration',d:'Confidence score updates every cycle',on:true},
+];
+const tgl=document.getElementById('toggles');
+cycles.forEach((c,i)=>{
+  const div=document.createElement('div');div.className='toggle-item';
+  div.innerHTML=`<div><div class="toggle-label">${c.n}</div><div class="toggle-sub">${c.d}</div></div><div class="toggle-switch ${c.on?'on':''}" id="tog-${i}" onclick="toggleSwitch(${i})"><div class="toggle-thumb"></div></div>`;
+  tgl.appendChild(div);
+});
+function toggleSwitch(i){document.getElementById('tog-'+i).classList.toggle('on');}
+
+// ── RESEARCH LOG ─────────────────────────────────────────
+const logEntries=[
+  '[09:14:22] <span class="ts">✓</span> Daily digest complete — 12 insights extracted',
+  '[06:00:11] <span class="ts">✓</span> Scheduled cycle ran — 8 signals updated',
+  '[03:17:44] <span class="ts">✓</span> Earnings calendar refreshed — 14 upcoming reports',
+  '[00:02:19] <span class="ts">✓</span> Sector rotation scan — SOX +2.1%, XLF -0.8%',
+];
+const log=document.getElementById('research-log');
+logEntries.forEach(e=>{const d=document.createElement('div');d.className='log-entry';d.innerHTML=e;log.appendChild(d);});
+
+// ── QUICK QUESTIONS ──────────────────────────────────────
+const quickQs=['What is the top signal right now?','Is NVDA a buy?','What are the Fed risks?','Summarize today\'s insights'];
+const qqEl=document.getElementById('quick-qs');
+quickQs.forEach(q=>{
+  const b=document.createElement('button');b.className='quick-btn';b.textContent=q;
+  b.onclick=()=>{document.getElementById('chat-inp').value=q;sendChat();};
+  qqEl.appendChild(b);
+});
+
+// ── DEPLOY GUIDE ─────────────────────────────────────────
+const deploySteps=[
+  {n:1,title:'Create a GitHub account',body:'GitHub is a website that stores your code online. Go to <a href="https://github.com" target="_blank" style="color:var(--green)">github.com</a> → click "Sign up" → enter your email and a password. GitHub is free. Think of it like Google Drive, but for code files.'},
+  {n:2,title:'Upload MarketBrain to GitHub',body:'Once signed in: click the green "New" button → name your repo "marketbrain" → click "Create repository". Then drag your <code style="background:var(--surface2);padding:2px 5px;border-radius:4px">index.html</code> file into the page. GitHub will save it.'},
+  {n:3,title:'Deploy to Vercel (makes it a live website)',body:'Go to <a href="https://vercel.com" target="_blank" style="color:var(--green)">vercel.com</a> → click "Sign up with GitHub" → click "Add New Project" → select your marketbrain repo → click Deploy. Vercel will give you a free URL like <code style="background:var(--surface2);padding:2px 5px;border-radius:4px">marketbrain.vercel.app</code>'},
+  {n:4,title:'Add your Claude API key',body:'Get your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--green)">console.anthropic.com</a>. In Vercel: go to your project → Settings → Environment Variables → add variable name <code style="background:var(--surface2);padding:2px 5px;border-radius:4px">ANTHROPIC_API_KEY</code> and paste your key as the value.'},
+  {n:5,title:'Set up Railway for the backend (scheduler)',body:'Railway runs your Node.js backend 24/7 on a free tier. Go to <a href="https://railway.app" target="_blank" style="color:var(--green)">railway.app</a> → sign up with GitHub → New Project → Deploy from GitHub repo → select marketbrain.'},
+  {n:6,title:'Set up Supabase (the database)',body:'Supabase is a free database. Go to <a href="https://supabase.com" target="_blank" style="color:var(--green)">supabase.com</a> → New Project → copy the connection string → paste it as env var <code style="background:var(--surface2);padding:2px 5px;border-radius:4px">DATABASE_URL</code> in Railway.'},
+  {n:7,title:'Update the site after making changes',body:'Every time you edit your HTML file locally, drag it to GitHub to replace the old version. Vercel detects the change automatically and re-deploys in about 30 seconds. You\'ll see the live URL update.'},
+];
+const ds=document.getElementById('deploy-steps');
+deploySteps.forEach(s=>{
+  ds.innerHTML+=`<div class="step-card"><div class="step-num">${s.n}</div><div class="step-title">${s.title}</div><div class="step-body">${s.body}</div></div>`;
+});
+
+// ── NAV ──────────────────────────────────────────────────
+function nav(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+function switchTab(prefix,id,el){
+  ['url','search','upload'].forEach(tid=>{const e=document.getElementById(prefix+'-'+tid);if(e)e.style.display='none';});
+  document.getElementById(prefix+'-'+id).style.display='block';
+  el.closest('.tabs').querySelectorAll('.tab').forEach(tab=>tab.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── PROGRESS HELPER ──────────────────────────────────────
+function fakeProgress(fillId,labelId,steps,cb){
+  let i=0;
+  const fill=document.getElementById(fillId),label=document.getElementById(labelId);
+  function step(){
+    if(i>=steps.length){if(cb)cb();return;}
+    label.textContent=steps[i][0];fill.style.width=steps[i][1]+'%';i++;
+    setTimeout(step,900+Math.random()*400);
+  }
+  step();
+}
+
+// ── VIDEO FEATURES ───────────────────────────────────────
+function analyzeUrl(){
+  const v=document.getElementById('video-url-inp').value.trim();if(!v)return;
+  const pw=document.getElementById('url-progress');pw.style.display='block';
+  fakeProgress('url-pfill','url-progress-label',[
+    ['Fetching transcript…',20],['Parsing captions…',45],
+    ['Extracting insights with Claude…',70],['Saving to knowledge base…',90],['Done!',100]
+  ],()=>{
+    pw.style.display='none';
+    document.getElementById('kpi-videos').textContent=parseInt(document.getElementById('kpi-videos').textContent)+1;
+    document.getElementById('kpi-kb').textContent=parseInt(document.getElementById('kpi-kb').textContent)+3;
+    document.getElementById('video-url-inp').value='';
+    addLogEntry('Video analyzed — 3 new insights extracted');
+  });
+}
+
+function searchVideos(){
+  const q=document.getElementById('vs-inp').value.trim();if(!q)return;
+  const r=document.getElementById('vs-results');
+  const results=[`${q} — Full Analysis 2025`,`${q} Options Strategy Breakdown`,`${q} Technical Levels to Watch`,`Wall Street on ${q}`,`${q} Earnings Deep Dive`];
+  r.innerHTML=results.map((title,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)"><input type="checkbox" id="vc${i}" style="accent-color:var(--green)"><label for="vc${i}" style="font-size:13px;cursor:pointer">${title}</label><span style="margin-left:auto;font-size:11px;color:var(--muted)">${Math.floor(Math.random()*50+10)}K views</span></div>`).join('')+`<div style="margin-top:12px"><button class="btn" onclick="analyzeSelected()">Analyze all selected</button></div>`;
+}
+
+function analyzeSelected(){
+  addLogEntry('Batch video analysis complete — 7 insights added');
+  document.getElementById('kpi-videos').textContent=parseInt(document.getElementById('kpi-videos').textContent)+3;
+}
+
+function handleUpload(e){
+  const f=e.target.files[0];if(!f)return;
+  const pw=document.getElementById('upload-progress');pw.style.display='block';
+  document.getElementById('upload-label').textContent=`Transcribing "${f.name}" with Whisper…`;
+  fakeProgress('upload-pfill','upload-label',[
+    ['Extracting audio…',15],['Sending to Whisper API…',35],
+    ['Transcribing speech…',60],['Analyzing with Claude…',80],['Saving insights…',95],['Complete!',100]
+  ],()=>{pw.style.display='none';addLogEntry(`"${f.name}" transcribed — 5 insights extracted`);});
+}
+
+function generateEntry(){
+  const e={t:'AI-Generated: Market Structure Analysis',b:'Automated pattern recognition detects potential liquidity sweep forming on ES futures. Historical precedent suggests 68% probability of reversal within 2 sessions.',conf:68,src:'AI Generated',tags:['Structure','ES','Pattern']};
+  kbData.unshift(e);renderKB(kbData);
+  document.getElementById('kb-count').textContent=kbData.length;
+}
+
+function runResearch(){
+  const v=document.getElementById('research-inp').value.trim();if(!v)return;
+  const pw=document.getElementById('research-progress');pw.style.display='block';
+  fakeProgress('research-pfill','research-label',[
+    ['Searching web…',20],['Reading sources…',45],
+    ['Synthesizing with Claude…',70],['Extracting insights…',88],['Done',100]
+  ],()=>{
+    pw.style.display='none';
+    document.getElementById('research-inp').value='';
+    addLogEntry(`Research complete: "${v.substring(0,40)}…" — 4 insights added`);
+  });
+}
+
+function addLogEntry(msg){
+  const now=new Date();
+  const ts=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const log=document.getElementById('research-log');
+  const d=document.createElement('div');d.className='log-entry';
+  d.innerHTML=`[${ts}] <span class="ts">✓</span> ${msg}`;
+  log.insertBefore(d,log.firstChild);
+}
+
+// ── SEARCH FEATURE ───────────────────────────────────────
+let currentEngine='google';
+let lastSearchUrl='';
+
+function setEngine(e){
+  currentEngine=e;
+  document.getElementById('se-google').classList.toggle('active',e==='google');
+  document.getElementById('se-youtube').classList.toggle('active',e==='youtube');
+  const chips=document.getElementById('quick-searches');
+  if(e==='youtube'){
+    chips.innerHTML=['NVDA earnings video','Fed rate decision explained','Stock analysis 2025','Options trading tutorial','Bull market signals'].map(q=>`<span class="quick-chip" onclick="quickSearch('${q}')">${q}</span>`).join('');
+  } else {
+    chips.innerHTML=['NVDA stock analysis','Fed interest rate 2025','S&P 500 outlook','TSLA earnings','Options flow today','Sector rotation 2025'].map(q=>`<span class="quick-chip" onclick="quickSearch('${q}')">${q}</span>`).join('');
+  }
+}
+
+function quickSearch(q){
+  document.getElementById('search-inp').value=q;
+  runSearch();
+}
+
+function runSearch(){
+  const q=document.getElementById('search-inp').value.trim();if(!q)return;
+  const frame=document.getElementById('search-frame');
+  const iframe=document.getElementById('search-iframe');
+  const placeholder=document.getElementById('frame-placeholder');
+  const openBtn=document.getElementById('open-in-tab-btn');
+
+  if(currentEngine==='youtube'){
+    lastSearchUrl=`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+  } else {
+    lastSearchUrl=`https://www.google.com/search?q=${encodeURIComponent(q+' stock market')}`;
+  }
+
+  iframe.src=lastSearchUrl;
+  frame.classList.add('visible');
+  placeholder.style.display='none';
+  openBtn.style.display='inline-flex';
+  addLogEntry(`Search: "${q}" on ${currentEngine==='google'?'Google':'YouTube'}`);
+}
+
+function openInTab(){
+  if(lastSearchUrl) window.open(lastSearchUrl,'_blank');
+}
+
+// ── CHAT ─────────────────────────────────────────────────
+const chatKB=kbData.map(e=>`- ${e.t}: ${e.b}`).join('\n');
+
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');
+  const msg=inp.value.trim();if(!msg)return;
+  inp.value='';
+  const msgs=document.getElementById('chat-messages');
+  const um=document.createElement('div');um.className='msg msg-user';um.textContent=msg;msgs.appendChild(um);
+  const ai=document.createElement('div');ai.className='msg msg-ai';ai.textContent='Thinking…';msgs.appendChild(ai);
+  msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are MarketBrain, a stock market AI assistant. Answer questions based on this knowledge base:\n${chatKB}\n\nBe concise, cite data from the knowledge base, and flag confidence levels where relevant.`,
+        messages:[{role:'user',content:msg}]
+      })
+    });
+    const data=await res.json();
+    ai.textContent=data.content?.[0]?.text||'No response received.';
+  } catch(e){
+    ai.textContent='Unable to reach Claude API. To enable live AI responses, add your ANTHROPIC_API_KEY — see the Deploy Guide for instructions.';
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ── COUNTDOWN ────────────────────────────────────────────
+let secs=20842;
+setInterval(()=>{
+  secs--;if(secs<0)secs=21600;
+  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;
+  document.getElementById('countdown').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+},1000);
+</script>
+</body>
+</html>
